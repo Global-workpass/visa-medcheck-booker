@@ -40,7 +40,7 @@ const Index = () => {
     bookings.push(newBooking);
     localStorage.setItem("bookings", JSON.stringify(bookings));
     
-    toast.success("Booking received. Waiting for admin approval.");
+    toast.success("Please check on your phone for a prompt to make your payment");
     
     // Reset form
     setFormData({
