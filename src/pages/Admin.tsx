@@ -9,11 +9,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Lock, Users, CheckCircle, Clock, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import Navigation from "@/components/Navigation";
+import { supabase } from "@/integrations/supabase/client";
 
 const Admin = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [credentials, setCredentials] = useState({ username: "", password: "" });
   const [bookings, setBookings] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -21,9 +23,27 @@ const Admin = () => {
     }
   }, [isLoggedIn]);
 
-  const loadBookings = () => {
-    const storedBookings = JSON.parse(localStorage.getItem("bookings") || "[]");
-    setBookings(storedBookings);
+  const loadBookings = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .order('submitted_date', { ascending: false });
+
+      if (error) {
+        console.error('Error loading bookings:', error);
+        toast.error("Failed to load bookings");
+        return;
+      }
+
+      setBookings(data || []);
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      toast.error("An unexpected error occurred");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleLogin = (e: React.FormEvent) => {
@@ -40,27 +60,35 @@ const Admin = () => {
   const handleLogout = () => {
     setIsLoggedIn(false);
     setCredentials({ username: "", password: "" });
+    setBookings([]);
     toast.success("Logged out successfully");
   };
 
-  const handleApprove = (bookingId: string) => {
-    const updatedBookings = bookings.map(booking => {
-      if (booking.id === bookingId) {
-        const appointmentDate = new Date();
-        appointmentDate.setDate(appointmentDate.getDate() + 3);
-        
-        return {
-          ...booking,
-          status: "approved",
-          appointmentDate: appointmentDate.toISOString()
-        };
-      }
-      return booking;
-    });
+  const handleApprove = async (bookingId: string) => {
+    try {
+      const appointmentDate = new Date();
+      appointmentDate.setDate(appointmentDate.getDate() + 3);
+      
+      const { error } = await supabase
+        .from('bookings')
+        .update({
+          status: 'approved',
+          appointment_date: appointmentDate.toISOString().split('T')[0]
+        })
+        .eq('id', bookingId);
 
-    setBookings(updatedBookings);
-    localStorage.setItem("bookings", JSON.stringify(updatedBookings));
-    toast.success("Booking approved successfully");
+      if (error) {
+        console.error('Error approving booking:', error);
+        toast.error("Failed to approve booking");
+        return;
+      }
+
+      toast.success("Booking approved successfully");
+      loadBookings(); // Refresh the list
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      toast.error("An unexpected error occurred");
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -197,7 +225,11 @@ const Admin = () => {
             <CardTitle className="text-2xl">All Bookings</CardTitle>
           </CardHeader>
           <CardContent>
-            {bookings.length === 0 ? (
+            {isLoading ? (
+              <div className="text-center py-8">
+                <p className="text-lg text-gray-600">Loading bookings...</p>
+              </div>
+            ) : bookings.length === 0 ? (
               <div className="text-center py-8">
                 <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <p className="text-xl text-gray-600">No bookings yet</p>
@@ -220,11 +252,11 @@ const Admin = () => {
                   <TableBody>
                     {bookings.map((booking) => (
                       <TableRow key={booking.id}>
-                        <TableCell className="font-medium">{booking.fullName}</TableCell>
-                        <TableCell>{booking.passportNumber}</TableCell>
+                        <TableCell className="font-medium">{booking.full_name}</TableCell>
+                        <TableCell>{booking.passport_number}</TableCell>
                         <TableCell>{booking.email}</TableCell>
-                        <TableCell className="capitalize">{booking.visaType}</TableCell>
-                        <TableCell>{formatDate(booking.submittedDate)}</TableCell>
+                        <TableCell className="capitalize">{booking.visa_type}</TableCell>
+                        <TableCell>{formatDate(booking.submitted_date)}</TableCell>
                         <TableCell>{getStatusBadge(booking.status)}</TableCell>
                         <TableCell>
                           {booking.status === "pending" ? (
@@ -238,7 +270,7 @@ const Admin = () => {
                             </Button>
                           ) : (
                             <span className="text-sm text-gray-500">
-                              Approved on {booking.appointmentDate ? formatDate(booking.appointmentDate) : 'N/A'}
+                              Approved on {booking.appointment_date ? formatDate(booking.appointment_date) : 'N/A'}
                             </span>
                           )}
                         </TableCell>

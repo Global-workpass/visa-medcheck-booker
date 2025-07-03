@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, MapPin, Phone, Mail } from "lucide-react";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
 import Navigation from "@/components/Navigation";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const [formData, setFormData] = useState({
@@ -18,8 +18,9 @@ const Index = () => {
     visaType: "",
     preferredDate: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.fullName || !formData.passportNumber || !formData.email || !formData.visaType || !formData.preferredDate) {
@@ -27,29 +28,41 @@ const Index = () => {
       return;
     }
 
-    // In a real app, this would send to backend
-    const bookings = JSON.parse(localStorage.getItem("bookings") || "[]");
-    const newBooking = {
-      id: Date.now().toString(),
-      ...formData,
-      submittedDate: new Date().toISOString(),
-      status: "pending",
-      appointmentDate: null,
-    };
-    
-    bookings.push(newBooking);
-    localStorage.setItem("bookings", JSON.stringify(bookings));
-    
-    toast.success("Please check on your phone for a prompt to make your payment");
-    
-    // Reset form
-    setFormData({
-      fullName: "",
-      passportNumber: "",
-      email: "",
-      visaType: "",
-      preferredDate: "",
-    });
+    setIsSubmitting(true);
+
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .insert({
+          full_name: formData.fullName,
+          passport_number: formData.passportNumber,
+          email: formData.email,
+          visa_type: formData.visaType,
+          preferred_date: formData.preferredDate,
+        });
+
+      if (error) {
+        console.error('Error submitting booking:', error);
+        toast.error("Failed to submit booking. Please try again.");
+        return;
+      }
+
+      toast.success("Please check on your phone for a prompt to make your payment");
+      
+      // Reset form
+      setFormData({
+        fullName: "",
+        passportNumber: "",
+        email: "",
+        visaType: "",
+        preferredDate: "",
+      });
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      toast.error("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -101,6 +114,7 @@ const Index = () => {
                     onChange={(e) => handleInputChange("fullName", e.target.value)}
                     placeholder="Enter your full name as on passport"
                     className="h-12"
+                    disabled={isSubmitting}
                   />
                 </div>
 
@@ -112,6 +126,7 @@ const Index = () => {
                     onChange={(e) => handleInputChange("passportNumber", e.target.value)}
                     placeholder="Enter your passport number"
                     className="h-12"
+                    disabled={isSubmitting}
                   />
                 </div>
 
@@ -124,12 +139,17 @@ const Index = () => {
                     onChange={(e) => handleInputChange("email", e.target.value)}
                     placeholder="Enter your email address"
                     className="h-12"
+                    disabled={isSubmitting}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="visaType">Visa Type *</Label>
-                  <Select value={formData.visaType} onValueChange={(value) => handleInputChange("visaType", value)}>
+                  <Select 
+                    value={formData.visaType} 
+                    onValueChange={(value) => handleInputChange("visaType", value)}
+                    disabled={isSubmitting}
+                  >
                     <SelectTrigger className="h-12">
                       <SelectValue placeholder="Select visa type" />
                     </SelectTrigger>
@@ -153,11 +173,16 @@ const Index = () => {
                     onChange={(e) => handleInputChange("preferredDate", e.target.value)}
                     className="h-12"
                     min={new Date().toISOString().split('T')[0]}
+                    disabled={isSubmitting}
                   />
                 </div>
 
-                <Button type="submit" className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-lg">
-                  Submit Booking Request
+                <Button 
+                  type="submit" 
+                  className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-lg"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Submitting..." : "Submit Booking Request"}
                 </Button>
               </form>
             </CardContent>

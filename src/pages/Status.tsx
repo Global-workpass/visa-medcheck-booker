@@ -8,13 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Calendar, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import Navigation from "@/components/Navigation";
+import { supabase } from "@/integrations/supabase/client";
 
 const Status = () => {
   const [passportNumber, setPassportNumber] = useState("");
   const [booking, setBooking] = useState<any>(null);
   const [searched, setSearched] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!passportNumber.trim()) {
@@ -22,16 +24,32 @@ const Status = () => {
       return;
     }
 
-    const bookings = JSON.parse(localStorage.getItem("bookings") || "[]");
-    const foundBooking = bookings.find((b: any) => 
-      b.passportNumber.toLowerCase() === passportNumber.toLowerCase()
-    );
+    setIsSearching(true);
 
-    setBooking(foundBooking || null);
-    setSearched(true);
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('passport_number', passportNumber.trim())
+        .maybeSingle();
 
-    if (!foundBooking) {
-      toast.error("No booking found with this passport number");
+      if (error) {
+        console.error('Error searching booking:', error);
+        toast.error("Error searching for booking. Please try again.");
+        return;
+      }
+
+      setBooking(data);
+      setSearched(true);
+
+      if (!data) {
+        toast.error("No booking found with this passport number");
+      }
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      toast.error("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsSearching(false);
     }
   };
 
@@ -95,11 +113,16 @@ const Status = () => {
                     onChange={(e) => setPassportNumber(e.target.value)}
                     placeholder="Enter your passport number"
                     className="h-12"
+                    disabled={isSearching}
                   />
                 </div>
-                <Button type="submit" className="w-full h-12 bg-blue-600 hover:bg-blue-700">
+                <Button 
+                  type="submit" 
+                  className="w-full h-12 bg-blue-600 hover:bg-blue-700"
+                  disabled={isSearching}
+                >
                   <Search className="w-4 h-4 mr-2" />
-                  Check Status
+                  {isSearching ? "Searching..." : "Check Status"}
                 </Button>
               </form>
             </CardContent>
@@ -124,30 +147,30 @@ const Status = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label className="text-sm font-medium text-gray-500">Full Name</Label>
-                        <p className="text-lg">{booking.fullName}</p>
+                        <p className="text-lg">{booking.full_name}</p>
                       </div>
                       <div>
                         <Label className="text-sm font-medium text-gray-500">Visa Type</Label>
-                        <p className="text-lg capitalize">{booking.visaType}</p>
+                        <p className="text-lg capitalize">{booking.visa_type}</p>
                       </div>
                       <div>
                         <Label className="text-sm font-medium text-gray-500">Submitted Date</Label>
-                        <p className="text-lg">{formatDate(booking.submittedDate)}</p>
+                        <p className="text-lg">{formatDate(booking.submitted_date)}</p>
                       </div>
                       <div>
                         <Label className="text-sm font-medium text-gray-500">Preferred Date</Label>
-                        <p className="text-lg">{formatDate(booking.preferredDate)}</p>
+                        <p className="text-lg">{formatDate(booking.preferred_date)}</p>
                       </div>
                     </div>
 
-                    {booking.status === "approved" && booking.appointmentDate && (
+                    {booking.status === "approved" && booking.appointment_date && (
                       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <CheckCircle className="w-5 h-5 text-green-600" />
                           <span className="font-semibold text-green-800">Appointment Confirmed</span>
                         </div>
                         <p className="text-green-700">
-                          Your medical examination is scheduled for {formatDate(booking.appointmentDate)}
+                          Your medical examination is scheduled for {formatDate(booking.appointment_date)}
                         </p>
                         <p className="text-sm text-green-600 mt-2">
                           Payment successful. Please arrive 15 minutes early with your passport and required documents.
