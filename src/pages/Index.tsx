@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,13 +48,34 @@ const Index = () => {
         return;
       }
 
-      // Show payment success toast for 15 seconds
-      toast.success("Payment successful! Your booking has been submitted for approval.", {
+      // Show waiting for approval toast
+      toast.success("Booking submitted! Please wait for approval.", {
         duration: 15000,
       });
       
       // Set submitted state to show success message
       setIsSubmitted(true);
+
+      // Listen for approval updates
+      const channel = supabase
+        .channel('booking-updates')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'bookings',
+            filter: `passport_number=eq.${formData.passportNumber}`
+          },
+          (payload) => {
+            if (payload.new.status === 'approved') {
+              toast.success("Payment successful! Your booking has been approved.", {
+                duration: 15000,
+              });
+            }
+          }
+        )
+        .subscribe();
 
       // Trigger refresh for admin page
       window.dispatchEvent(new CustomEvent('bookingSubmitted'));
@@ -122,10 +142,10 @@ const Index = () => {
             <CardContent className="p-8">
               {isSubmitted ? (
                 <div className="text-center space-y-6">
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                    <div className="text-green-800">
-                      <h3 className="text-xl font-semibold mb-2">Payment Successful!</h3>
-                      <p className="mb-4">Your booking has been submitted and is awaiting approval.</p>
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                    <div className="text-yellow-800">
+                      <h3 className="text-xl font-semibold mb-2">Awaiting Approval</h3>
+                      <p className="mb-4">Your booking has been submitted and is pending approval.</p>
                       <div className="text-left space-y-2">
                         <p><strong>Name:</strong> {formData.fullName}</p>
                         <p><strong>Passport Number:</strong> {formData.passportNumber}</p>
@@ -133,7 +153,7 @@ const Index = () => {
                         <p><strong>Visa Type:</strong> {formData.visaType}</p>
                         <p><strong>Preferred Date:</strong> {formData.preferredDate}</p>
                       </div>
-                      <p className="mt-4 text-sm">You will receive an approval notification once your booking is processed.</p>
+                      <p className="mt-4 text-sm">You will receive a payment confirmation once your booking is approved by our team.</p>
                     </div>
                   </div>
                   <Button 
@@ -221,7 +241,7 @@ const Index = () => {
                     className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-lg"
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? "Processing Payment..." : "Pay to Submit"}
+                    {isSubmitting ? "Processing..." : "Pay to Submit"}
                   </Button>
                 </form>
               )}

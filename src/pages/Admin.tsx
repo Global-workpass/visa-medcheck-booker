@@ -96,10 +96,7 @@ const Admin = () => {
         return;
       }
 
-      toast.success(`Booking approved for ${userName}! Appointment scheduled for ${appointmentDate.toLocaleDateString()}.`, {
-        duration: 15000,
-      });
-      
+      // No toast notification for admin - user will get notified via realtime updates
       loadBookings(); // Refresh the list
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -163,13 +160,6 @@ const Admin = () => {
                 Login
               </Button>
             </form>
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-600 text-center">
-                Demo credentials:<br />
-                Username: <strong>admin</strong><br />
-                Password: <strong>admin123</strong>
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>
