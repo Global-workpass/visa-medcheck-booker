@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Lock, Users, CheckCircle, Clock, LogOut } from "lucide-react";
+import { Lock, Users, CheckCircle, Clock, LogOut, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import Navigation from "@/components/Navigation";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +34,31 @@ const Admin = () => {
     window.addEventListener('bookingSubmitted', handleBookingSubmitted);
     return () => {
       window.removeEventListener('bookingSubmitted', handleBookingSubmitted);
+    };
+  }, [isLoggedIn]);
+
+  // Real-time updates for bookings
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    const channel = supabase
+      .channel('admin-booking-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bookings'
+        },
+        (payload) => {
+          console.log('Real-time booking update:', payload);
+          loadBookings(); // Refresh the list when any booking changes
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
     };
   }, [isLoggedIn]);
 
@@ -77,7 +103,7 @@ const Admin = () => {
     toast.success("Logged out successfully");
   };
 
-  const handleApprove = async (passportNumber: string, userEmail: string, userName: string) => {
+  const handleApprove = async (passportNumber: string) => {
     try {
       const appointmentDate = new Date();
       appointmentDate.setDate(appointmentDate.getDate() + 3);
@@ -176,10 +202,21 @@ const Admin = () => {
             <h1 className="text-4xl font-bold text-gray-900 mb-2">Dashboard</h1>
             <p className="text-lg text-gray-600">Manage medical examination bookings</p>
           </div>
-          <Button onClick={handleLogout} variant="outline" className="flex items-center gap-2">
-            <LogOut className="w-4 h-4" />
-            Logout
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={loadBookings} 
+              variant="outline" 
+              className="flex items-center gap-2"
+              disabled={isLoading}
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button onClick={handleLogout} variant="outline" className="flex items-center gap-2">
+              <LogOut className="w-4 h-4" />
+              Logout
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -267,7 +304,7 @@ const Admin = () => {
                         <TableCell>
                           {booking.status === "pending" ? (
                             <Button
-                              onClick={() => handleApprove(booking.passport_number, booking.email, booking.full_name)}
+                              onClick={() => handleApprove(booking.passport_number)}
                               size="sm"
                               className="bg-green-600 hover:bg-green-700"
                             >

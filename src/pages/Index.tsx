@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,40 @@ const Index = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  useEffect(() => {
+    let channel: any = null;
+
+    if (isSubmitted && formData.passportNumber) {
+      // Listen for approval updates
+      channel = supabase
+        .channel('booking-updates')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'bookings',
+            filter: `passport_number=eq.${formData.passportNumber}`
+          },
+          (payload) => {
+            console.log('Booking update received:', payload);
+            if (payload.new.status === 'approved') {
+              toast.success("Your booking has been approved! Please proceed to the medical center on your scheduled date.", {
+                duration: 15000,
+              });
+            }
+          }
+        )
+        .subscribe();
+    }
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [isSubmitted, formData.passportNumber]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,33 +84,12 @@ const Index = () => {
       }
 
       // Show waiting for approval toast
-      toast.success("Booking submitted! Please wait for approval.", {
-        duration: 15000,
+      toast.success("Booking submitted successfully! Awaiting approval from our team.", {
+        duration: 10000,
       });
       
       // Set submitted state to show success message
       setIsSubmitted(true);
-
-      // Listen for approval updates
-      const channel = supabase
-        .channel('booking-updates')
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'bookings',
-            filter: `passport_number=eq.${formData.passportNumber}`
-          },
-          (payload) => {
-            if (payload.new.status === 'approved') {
-              toast.success("Payment successful! Your booking has been approved.", {
-                duration: 15000,
-              });
-            }
-          }
-        )
-        .subscribe();
 
       // Trigger refresh for admin page
       window.dispatchEvent(new CustomEvent('bookingSubmitted'));
@@ -145,7 +159,7 @@ const Index = () => {
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
                     <div className="text-yellow-800">
                       <h3 className="text-xl font-semibold mb-2">Awaiting Approval</h3>
-                      <p className="mb-4">Your booking has been submitted and is pending approval.</p>
+                      <p className="mb-4">Your booking has been submitted and is pending approval from our medical team.</p>
                       <div className="text-left space-y-2">
                         <p><strong>Name:</strong> {formData.fullName}</p>
                         <p><strong>Passport Number:</strong> {formData.passportNumber}</p>
@@ -153,7 +167,7 @@ const Index = () => {
                         <p><strong>Visa Type:</strong> {formData.visaType}</p>
                         <p><strong>Preferred Date:</strong> {formData.preferredDate}</p>
                       </div>
-                      <p className="mt-4 text-sm">You will receive a payment confirmation once your booking is approved by our team.</p>
+                      <p className="mt-4 text-sm">You will receive an approval notification once your booking is reviewed. No payment is required at this time.</p>
                     </div>
                   </div>
                   <Button 
@@ -241,7 +255,7 @@ const Index = () => {
                     className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-lg"
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? "Processing..." : "Pay to Submit"}
+                    {isSubmitting ? "Submitting..." : "Submit Application"}
                   </Button>
                 </form>
               )}
