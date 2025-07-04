@@ -77,7 +77,7 @@ const Admin = () => {
     toast.success("Logged out successfully");
   };
 
-  const handleApprove = async (bookingId: string, userEmail: string, userName: string) => {
+  const handleApprove = async (passportNumber: string, userEmail: string, userName: string) => {
     try {
       const appointmentDate = new Date();
       appointmentDate.setDate(appointmentDate.getDate() + 3);
@@ -88,7 +88,7 @@ const Admin = () => {
           status: 'approved',
           appointment_date: appointmentDate.toISOString().split('T')[0]
         })
-        .eq('id', bookingId);
+        .eq('passport_number', passportNumber);
 
       if (error) {
         console.error('Error approving booking:', error);
@@ -267,7 +267,7 @@ const Admin = () => {
                   </TableHeader>
                   <TableBody>
                     {bookings.map((booking) => (
-                      <TableRow key={booking.id}>
+                      <TableRow key={booking.passport_number}>
                         <TableCell className="font-medium">{booking.full_name}</TableCell>
                         <TableCell>{booking.passport_number}</TableCell>
                         <TableCell>{booking.email}</TableCell>
@@ -277,7 +277,7 @@ const Admin = () => {
                         <TableCell>
                           {booking.status === "pending" ? (
                             <Button
-                              onClick={() => handleApprove(booking.id, booking.email, booking.full_name)}
+                              onClick={() => handleApprove(booking.passport_number, booking.email, booking.full_name)}
                               size="sm"
                               className="bg-green-600 hover:bg-green-700"
                             >
