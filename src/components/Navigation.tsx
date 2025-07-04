@@ -1,7 +1,7 @@
 
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Home, Search, Shield, Calendar } from "lucide-react";
+import { Home, Search, Calendar } from "lucide-react";
 
 const Navigation = () => {
   const location = useLocation();
@@ -37,16 +37,6 @@ const Navigation = () => {
               >
                 <Search className="w-4 h-4" />
                 Check Status
-              </Button>
-            </Link>
-            
-            <Link to="/admin">
-              <Button 
-                variant={isActive("/admin") ? "default" : "ghost"}
-                className="flex items-center gap-2"
-              >
-                <Shield className="w-4 h-4" />
-                Admin
               </Button>
             </Link>
           </div>

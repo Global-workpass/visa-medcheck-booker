@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +20,20 @@ const Admin = () => {
     if (isLoggedIn) {
       loadBookings();
     }
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    // Listen for new booking submissions to auto-refresh
+    const handleBookingSubmitted = () => {
+      if (isLoggedIn) {
+        loadBookings();
+      }
+    };
+
+    window.addEventListener('bookingSubmitted', handleBookingSubmitted);
+    return () => {
+      window.removeEventListener('bookingSubmitted', handleBookingSubmitted);
+    };
   }, [isLoggedIn]);
 
   const loadBookings = async () => {
@@ -64,7 +77,7 @@ const Admin = () => {
     toast.success("Logged out successfully");
   };
 
-  const handleApprove = async (bookingId: string) => {
+  const handleApprove = async (bookingId: string, userEmail: string, userName: string) => {
     try {
       const appointmentDate = new Date();
       appointmentDate.setDate(appointmentDate.getDate() + 3);
@@ -83,7 +96,10 @@ const Admin = () => {
         return;
       }
 
-      toast.success("Booking approved successfully");
+      toast.success(`Booking approved for ${userName}! Appointment scheduled for ${appointmentDate.toLocaleDateString()}.`, {
+        duration: 15000,
+      });
+      
       loadBookings(); // Refresh the list
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -167,7 +183,7 @@ const Admin = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">Dashboard</h1>
             <p className="text-lg text-gray-600">Manage medical examination bookings</p>
           </div>
           <Button onClick={handleLogout} variant="outline" className="flex items-center gap-2">
@@ -261,7 +277,7 @@ const Admin = () => {
                         <TableCell>
                           {booking.status === "pending" ? (
                             <Button
-                              onClick={() => handleApprove(booking.id)}
+                              onClick={() => handleApprove(booking.id, booking.email, booking.full_name)}
                               size="sm"
                               className="bg-green-600 hover:bg-green-700"
                             >

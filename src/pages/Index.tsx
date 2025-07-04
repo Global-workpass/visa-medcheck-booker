@@ -1,14 +1,14 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, MapPin, Phone, Mail } from "lucide-react";
+import { Calendar, MapPin, Phone, Mail, Shield } from "lucide-react";
 import { toast } from "sonner";
 import Navigation from "@/components/Navigation";
 import { supabase } from "@/integrations/supabase/client";
+import { Link } from "react-router-dom";
 
 const Index = () => {
   const [formData, setFormData] = useState({
@@ -47,7 +47,10 @@ const Index = () => {
         return;
       }
 
-      toast.success("Please check on your phone for a prompt to make your payment");
+      // Show payment success toast for 15 seconds
+      toast.success("Payment successful! Your booking has been submitted for approval.", {
+        duration: 15000,
+      });
       
       // Reset form
       setFormData({
@@ -57,6 +60,9 @@ const Index = () => {
         visaType: "",
         preferredDate: "",
       });
+
+      // Trigger refresh for admin page
+      window.dispatchEvent(new CustomEvent('bookingSubmitted'));
     } catch (error) {
       console.error('Unexpected error:', error);
       toast.error("An unexpected error occurred. Please try again.");
@@ -182,7 +188,7 @@ const Index = () => {
                   className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-lg"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? "Submitting..." : "Submit Booking Request"}
+                  {isSubmitting ? "Processing Payment..." : "Pay to Submit"}
                 </Button>
               </form>
             </CardContent>
@@ -192,14 +198,23 @@ const Index = () => {
 
       {/* Footer */}
       <footer className="bg-gray-800 text-white py-8">
-        <div className="container mx-auto px-4 text-center">
-          <div className="flex justify-center items-center gap-2 mb-4">
-            <Mail className="w-5 h-5" />
-            <span>info@visamedcheck.com</span>
+        <div className="container mx-auto px-4">
+          <div className="flex justify-between items-center">
+            <div className="flex justify-center items-center gap-2 flex-1">
+              <Mail className="w-5 h-5" />
+              <span>info@visamedcheck.com</span>
+            </div>
+            <Link to="/admin" className="ml-4">
+              <Button variant="ghost" size="icon" className="text-white hover:bg-gray-700">
+                <Shield className="w-5 h-5" />
+              </Button>
+            </Link>
           </div>
-          <p className="text-sm text-gray-400">
-            © 2024 Visa Medical Check Services. All rights reserved.
-          </p>
+          <div className="text-center mt-4">
+            <p className="text-sm text-gray-400">
+              © 2024 Visa Medical Check Services. All rights reserved.
+            </p>
+          </div>
         </div>
       </footer>
     </div>

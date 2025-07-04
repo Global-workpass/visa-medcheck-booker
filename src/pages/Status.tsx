@@ -11,7 +11,7 @@ import Navigation from "@/components/Navigation";
 import { supabase } from "@/integrations/supabase/client";
 
 const Status = () => {
-  const [passportNumber, setPassportNumber] = useState("");
+  const [searchValue, setSearchValue] = useState("");
   const [booking, setBooking] = useState<any>(null);
   const [searched, setSearched] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -19,8 +19,8 @@ const Status = () => {
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!passportNumber.trim()) {
-      toast.error("Please enter a passport number");
+    if (!searchValue.trim()) {
+      toast.error("Please enter a passport number or email address");
       return;
     }
 
@@ -30,7 +30,7 @@ const Status = () => {
       const { data, error } = await supabase
         .from('bookings')
         .select('*')
-        .eq('passport_number', passportNumber.trim())
+        .or(`passport_number.eq.${searchValue.trim()},email.eq.${searchValue.trim()}`)
         .maybeSingle();
 
       if (error) {
@@ -43,7 +43,7 @@ const Status = () => {
       setSearched(true);
 
       if (!data) {
-        toast.error("No booking found with this passport number");
+        toast.error("No booking found with this passport number or email");
       }
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -92,7 +92,7 @@ const Status = () => {
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">Check Booking Status</h1>
             <p className="text-lg text-gray-600">
-              Enter your passport number to check the status of your medical examination booking
+              Enter your passport number or email address to check the status of your medical examination booking
             </p>
           </div>
 
@@ -106,12 +106,12 @@ const Status = () => {
             <CardContent className="p-6">
               <form onSubmit={handleSearch} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="passportNumber">Passport Number</Label>
+                  <Label htmlFor="searchValue">Passport Number or Email Address</Label>
                   <Input
-                    id="passportNumber"
-                    value={passportNumber}
-                    onChange={(e) => setPassportNumber(e.target.value)}
-                    placeholder="Enter your passport number"
+                    id="searchValue"
+                    value={searchValue}
+                    onChange={(e) => setSearchValue(e.target.value)}
+                    placeholder="Enter your passport number or email address"
                     className="h-12"
                     disabled={isSearching}
                   />
@@ -195,7 +195,7 @@ const Status = () => {
                     <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                     <p className="text-xl text-gray-600 mb-2">No booking found</p>
                     <p className="text-gray-500">
-                      Please check your passport number and try again
+                      Please check your passport number or email address and try again
                     </p>
                   </div>
                 )}
