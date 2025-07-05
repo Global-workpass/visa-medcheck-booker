@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, MapPin, Phone, Mail, Shield, RefreshCw } from "lucide-react";
+import { Calendar, MapPin, Phone, Mail, Shield, RefreshCw, Info } from "lucide-react";
 import { toast } from "sonner";
 import Navigation from "@/components/Navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Index = () => {
   const [formData, setFormData] = useState({
@@ -18,10 +19,10 @@ const Index = () => {
     visaType: "",
     preferredDate: "",
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [bookingStatus, setBookingStatus] = useState<string>("");
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSubmitting, setIsSubmitting = useState(false);
+  const [isSubmitted, setIsSubmitted = useState(false);
+  const [bookingStatus, setBookingStatus = useState<string>(");
+  const [isRefreshing, setIsRefreshing = useState(false);
 
   useEffect(() => {
     let channel: any = null;
@@ -211,11 +212,17 @@ const Index = () => {
                         <p><strong>Visa Type:</strong> {formData.visaType}</p>
                         <p><strong>Preferred Date:</strong> {formData.preferredDate}</p>
                       </div>
-                      {bookingStatus !== 'approved' && (
-                        <p className="mt-4 text-sm">You will receive an approval notification once your booking is reviewed.</p>
-                      )}
                     </div>
                   </div>
+                  
+                  {bookingStatus !== 'approved' && (
+                    <Alert className="bg-blue-50 border-blue-200">
+                      <Info className="h-4 w-4 text-blue-600" />
+                      <AlertDescription className="text-blue-800">
+                        <strong>Please keep checking your status:</strong> Use the "Check Status" button below to refresh and see if your booking has been approved. You may need to check periodically as approval times can vary.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                   
                   <div className="flex gap-4 justify-center">
                     <Button 
