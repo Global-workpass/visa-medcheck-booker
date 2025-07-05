@@ -19,10 +19,10 @@ const Index = () => {
     visaType: "",
     preferredDate: "",
   });
-  const [isSubmitting, setIsSubmitting = useState(false);
-  const [isSubmitted, setIsSubmitted = useState(false);
-  const [bookingStatus, setBookingStatus = useState<string>(");
-  const [isRefreshing, setIsRefreshing = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [bookingStatus, setBookingStatus] = useState<string>("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     let channel: any = null;
