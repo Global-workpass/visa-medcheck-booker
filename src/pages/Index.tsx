@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, MapPin, Phone, Mail, Shield } from "lucide-react";
+import { Calendar, MapPin, Phone, Mail, Shield, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import Navigation from "@/components/Navigation";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +20,8 @@ const Index = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [bookingStatus, setBookingStatus] = useState<string>("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     let channel: any = null;
@@ -40,6 +41,7 @@ const Index = () => {
           (payload) => {
             console.log('Booking update received:', payload);
             if (payload.new.status === 'approved') {
+              setBookingStatus('approved');
               toast.success("Your booking has been approved! Please proceed to the medical center on your scheduled date.", {
                 duration: 15000,
               });
@@ -55,6 +57,39 @@ const Index = () => {
       }
     };
   }, [isSubmitted, formData.passportNumber]);
+
+  const checkBookingStatus = async () => {
+    if (!formData.passportNumber) return;
+
+    setIsRefreshing(true);
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('status')
+        .eq('passport_number', formData.passportNumber)
+        .single();
+
+      if (error) {
+        console.error('Error checking booking status:', error);
+        toast.error("Failed to check booking status");
+        return;
+      }
+
+      if (data?.status === 'approved' && bookingStatus !== 'approved') {
+        setBookingStatus('approved');
+        toast.success("Your booking has been approved! Please proceed to the medical center on your scheduled date.", {
+          duration: 15000,
+        });
+      } else if (data?.status === 'pending') {
+        toast.info("Your booking is still pending approval");
+      }
+    } catch (error) {
+      console.error('Error checking booking status:', error);
+      toast.error("Failed to check booking status");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,8 +123,9 @@ const Index = () => {
         duration: 10000,
       });
       
-      // Set submitted state to show success message
+      // Set submitted state and initial status
       setIsSubmitted(true);
+      setBookingStatus('pending');
 
       // Trigger refresh for admin page
       window.dispatchEvent(new CustomEvent('bookingSubmitted'));
@@ -107,6 +143,7 @@ const Index = () => {
 
   const handleNewBooking = () => {
     setIsSubmitted(false);
+    setBookingStatus("");
     setFormData({
       fullName: "",
       passportNumber: "",
@@ -156,10 +193,17 @@ const Index = () => {
             <CardContent className="p-8">
               {isSubmitted ? (
                 <div className="text-center space-y-6">
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-                    <div className="text-yellow-800">
-                      <h3 className="text-xl font-semibold mb-2">Awaiting Approval</h3>
-                      <p className="mb-4">Your booking has been submitted and is pending approval from our medical team.</p>
+                  <div className={`${bookingStatus === 'approved' ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'} border rounded-lg p-6`}>
+                    <div className={bookingStatus === 'approved' ? 'text-green-800' : 'text-yellow-800'}>
+                      <h3 className="text-xl font-semibold mb-2">
+                        {bookingStatus === 'approved' ? 'Booking Approved!' : 'Awaiting Approval'}
+                      </h3>
+                      <p className="mb-4">
+                        {bookingStatus === 'approved' 
+                          ? 'Your booking has been approved! Please proceed to the medical center on your scheduled date.'
+                          : 'Your booking has been submitted and is pending approval from our medical team.'
+                        }
+                      </p>
                       <div className="text-left space-y-2">
                         <p><strong>Name:</strong> {formData.fullName}</p>
                         <p><strong>Passport Number:</strong> {formData.passportNumber}</p>
@@ -167,15 +211,29 @@ const Index = () => {
                         <p><strong>Visa Type:</strong> {formData.visaType}</p>
                         <p><strong>Preferred Date:</strong> {formData.preferredDate}</p>
                       </div>
-                      <p className="mt-4 text-sm">You will receive an approval notification once your booking is reviewed. No payment is required at this time.</p>
+                      {bookingStatus !== 'approved' && (
+                        <p className="mt-4 text-sm">You will receive an approval notification once your booking is reviewed.</p>
+                      )}
                     </div>
                   </div>
-                  <Button 
-                    onClick={handleNewBooking}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    Submit Another Booking
-                  </Button>
+                  
+                  <div className="flex gap-4 justify-center">
+                    <Button 
+                      onClick={checkBookingStatus}
+                      disabled={isRefreshing}
+                      className="bg-green-600 hover:bg-green-700 flex items-center gap-2"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                      {isRefreshing ? "Checking..." : "Check Status"}
+                    </Button>
+                    
+                    <Button 
+                      onClick={handleNewBooking}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      Submit Another Booking
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
